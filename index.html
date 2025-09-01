@@ -116,7 +116,7 @@
       // --- Inlined from components/icons/DocumentIcon.tsx ---
       const DocumentIcon = ({ className = "w-6 h-6" }) => (
         <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m-1.5 0-3.75 3.75m3.75-3.75V4.5m0 13.5h-3a1.5 1.5 0 0 1-1.5-1.5v-10.5a1.5 1.5 0 0 1 1.5-1.5h3.75a1.5 1.5 0 0 1 1.5 1.5v10.5a1.5 1.5 0 0 1-1.5 1.5h-3.75Z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m-1.5 0-3.75 3.75m3.75-3.75V4.5m0 13.5h-3a1.5 1.5 0 0 1-1.5-1.5v-10.5a1.5 1.5 0 0 1 1.5-1.5h3.75a1.5 1.5 0 0 1 1.5 1.5v10.5a1.5 1.5 0 0 1-1.5-1.5h-3.75Z" />
         </svg>
       );
 
@@ -257,7 +257,7 @@
           const [discoveredFiles, setDiscoveredFiles] = useState([]);
           const [error, setError] = useState(null);
 
-          const PDF_BASE_URL = 'https://ggawoos-bot.github.io/chat11/pdf/';
+          const PDF_BASE_URL = 'https://ggawoos-bot.github.io/chat2/pdf/';
 
           const chatSession = useMemo(() => {
               if (sourceText.trim()) {
@@ -360,14 +360,20 @@
                   }
               } catch (err) {
                   console.error(err);
-                  const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-                  setError(`Failed to get response: ${errorMessage}`);
+                  let displayMessage = '죄송합니다, 답변을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+
+                  if (err instanceof Error && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED'))) {
+                      displayMessage = '답변 요청 한도를 초과했습니다. 잠시 후 다시 시도해 주세요.';
+                  }
+                  
+                  setError(displayMessage);
+                  
                   setMessages(prev => {
                       const newMessages = [...prev];
-                      if(newMessages[newMessages.length - 1].role === Role.MODEL) {
+                      if (newMessages.length > 0 && newMessages[newMessages.length - 1].role === Role.MODEL) {
                         newMessages.pop();
                       }
-                      return [...newMessages, { role: Role.MODEL, content: `Sorry, I encountered an error. ${errorMessage}` }];
+                      return [...newMessages, { role: Role.MODEL, content: displayMessage }];
                   });
 
               } finally {
