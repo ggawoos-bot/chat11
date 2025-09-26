@@ -424,7 +424,7 @@
           disabled,
           lastMessageTime = 0,
           maxLength = 500,
-          minInterval = 3000,
+          minInterval = 5000,  // 5초 간격으로 변경
           retryCountdown = 0
       }) => {
           const [inputError, setInputError] = useState('');
@@ -756,18 +756,18 @@
                   console.error(err);
                   let displayMessage = '죄송합니다, 답변을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 
-                  if (err instanceof Error && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED'))) {
-                      // 실제 API 한도 복구 시간 계산
+                  if (err instanceof Error && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED') || err.message.includes('quota') || err.message.includes('limit'))) {
+                      // 실제 API 한도 복구 시간 계산 (더 짧게)
                       let retryDelay;
                       if (err.message.includes('429')) {
-                          // Rate limit - 일반적으로 1분 후 복구
-                          retryDelay = 1 * 60 * 1000; // 1분
+                          // Rate limit - 30초 후 복구
+                          retryDelay = 30 * 1000; // 30초
                       } else if (err.message.includes('RESOURCE_EXHAUSTED')) {
-                          // Resource exhausted - 더 긴 대기 시간
-                          retryDelay = 5 * 60 * 1000; // 5분
-                      } else {
-                          // 기본값
+                          // Resource exhausted - 2분 후 복구
                           retryDelay = 2 * 60 * 1000; // 2분
+                      } else {
+                          // 기본값 - 1분
+                          retryDelay = 1 * 60 * 1000; // 1분
                       }
                       
                       const nextRetry = new Date(Date.now() + retryDelay);
@@ -947,8 +947,8 @@
                                                  
                                                  {/* 상태 메시지 */}
                                                  <div className="text-xs text-red-200">
-                                                     {retryCountdown > 180 ? '🔴 API 한도 초과 - 대기 중' :
-                                                      retryCountdown > 60 ? '🟡 복구 중 - 잠시만 기다려주세요' :
+                                                     {retryCountdown > 90 ? '🔴 API 한도 초과 - 대기 중' :
+                                                      retryCountdown > 30 ? '🟡 복구 중 - 잠시만 기다려주세요' :
                                                       '🟢 곧 사용 가능합니다'}
                                                  </div>
                                              </div>
@@ -969,7 +969,7 @@
                                       disabled={!chatSession || isParsing || retryCountdown > 0}
                                       lastMessageTime={lastMessageTime}
                                       maxLength={500}
-                                      minInterval={3000}
+                                      minInterval={5000}
                                       retryCountdown={retryCountdown}
                                   />
                               </>

@@ -44,8 +44,8 @@ export interface ApiConfig {
  */
 export const API_CONFIG: ApiConfig = {
   RATE_LIMIT: {
-    REQUESTS_PER_MINUTE: 10,
-    MIN_INTERVAL_MS: 1000,
+    REQUESTS_PER_MINUTE: 60,  // 1분에 60회 (1초에 1회)
+    MIN_INTERVAL_MS: 2000,    // 2초 간격
     RETRY_DELAY_MS: 5000,
     MAX_RETRIES: 3
   },
@@ -55,7 +55,7 @@ export const API_CONFIG: ApiConfig = {
     MAX_ITEMS: 1000
   },
   INPUT_LIMIT: {
-    MIN_INTERVAL_MS: 3000,
+    MIN_INTERVAL_MS: 5000,    // 5초 간격 (더 길게)
     MAX_LENGTH: 500,
     PREVENT_DUPLICATES: true
   }
@@ -74,8 +74,12 @@ export const getConfig = (): ApiConfig => {
       ...API_CONFIG,
       RATE_LIMIT: {
         ...API_CONFIG.RATE_LIMIT,
-        REQUESTS_PER_MINUTE: 20, // 개발 시 더 많은 요청 허용
-        MIN_INTERVAL_MS: 500,    // 더 빠른 간격
+        REQUESTS_PER_MINUTE: 120, // 개발 시 2분에 120회 (1초에 2회)
+        MIN_INTERVAL_MS: 1000,    // 1초 간격
+      },
+      INPUT_LIMIT: {
+        ...API_CONFIG.INPUT_LIMIT,
+        MIN_INTERVAL_MS: 2000,    // 개발 시 2초 간격
       },
       CACHE: {
         ...API_CONFIG.CACHE,
