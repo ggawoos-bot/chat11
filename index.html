@@ -425,7 +425,8 @@
           lastMessageTime = 0,
           maxLength = 500,
           minInterval = 5000,  // 5초 간격으로 변경
-          retryCountdown = 0
+          retryCountdown = 0,
+          lastSentMessage = ''
       }) => {
           const [inputError, setInputError] = useState('');
           const [remainingTime, setRemainingTime] = useState(0);
@@ -461,12 +462,7 @@
                   return;
               }
               
-              // 중복 메시지 검사
-              if (value.trim() === currentMessage.trim() && value.trim() !== '') {
-                  setInputError('동일한 메시지를 연속으로 보낼 수 없습니다.');
-                  return;
-              }
-              
+              // 에러 메시지 초기화
               setInputError('');
               setCurrentMessage(value);
           };
@@ -484,6 +480,12 @@
                   setInputError(`잠시 후 다시 시도해주세요. (${Math.ceil(remainingTime / 1000)}초 남음)`);
                   return;
               }
+              
+              // 중복 메시지 검사 (선택적 - 필요시 활성화)
+              // if (currentMessage.trim() === lastSentMessage.trim()) {
+              //     setInputError('동일한 메시지를 연속으로 보낼 수 없습니다.');
+              //     return;
+              // }
               
               setInputError('');
               onSendMessage(e);
@@ -517,6 +519,18 @@
                           type="text"
                           value={currentMessage}
                           onChange={handleInputChange}
+                          onKeyDown={(e) => {
+                              // 스페이스바 입력 보장
+                              if (e.key === ' ') {
+                                  e.stopPropagation();
+                              }
+                          }}
+                          onKeyUp={(e) => {
+                              // 스페이스바 입력 보장
+                              if (e.key === ' ') {
+                                  e.stopPropagation();
+                              }
+                          }}
                           placeholder={
                               disabled ? "자료를 로딩 중입니다..." : 
                               retryCountdown > 0 ? `질문을 입력하세요 (${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 전송 가능)` :
@@ -617,6 +631,7 @@
           const [messages, setMessages] = useState([]);
           const [currentMessage, setCurrentMessage] = useState('');
           const [isLoading, setIsLoading] = useState(false);
+          const [lastSentMessage, setLastSentMessage] = useState('');
           const [isParsing, setIsParsing] = useState(true);
           const [discoveredFiles, setDiscoveredFiles] = useState([]);
           const [error, setError] = useState(null);
@@ -729,6 +744,7 @@
 
               const userMessage = { role: Role.USER, content: currentMessage.trim() };
               setMessages(prev => [...prev, userMessage]);
+              setLastSentMessage(currentMessage.trim()); // 마지막 전송된 메시지 저장
               setCurrentMessage('');
               setIsLoading(true);
               setError(null);
@@ -971,6 +987,7 @@
                                       maxLength={500}
                                       minInterval={5000}
                                       retryCountdown={retryCountdown}
+                                      lastSentMessage={lastSentMessage}
                                   />
                               </>
                           </div>

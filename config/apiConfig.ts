@@ -57,7 +57,7 @@ export const API_CONFIG: ApiConfig = {
   INPUT_LIMIT: {
     MIN_INTERVAL_MS: 5000,    // 5초 간격 (더 길게)
     MAX_LENGTH: 500,
-    PREVENT_DUPLICATES: true
+    PREVENT_DUPLICATES: false  // 중복 메시지 방지 비활성화
   }
 };
 
