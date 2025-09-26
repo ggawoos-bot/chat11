@@ -165,28 +165,383 @@
           );
       };
       
-      // --- Inlined from components/MessageInput.tsx ---
-      const MessageInput = ({ currentMessage, setCurrentMessage, onSendMessage, isLoading, disabled }) => {
-          const isInputDisabled = isLoading || disabled;
+      // --- Inlined from components/StatusIndicator.tsx ---
+      const StatusIndicator = ({ 
+          cacheStats, 
+          queueStatus, 
+          isLoading = false, 
+          error = null, 
+          className = "" 
+      }) => {
+          const formatBytes = (bytes) => {
+              if (bytes === 0) return '0 Bytes';
+              const k = 1024;
+              const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+          };
+
+          const formatPercentage = (value) => {
+              return (value * 100).toFixed(1) + '%';
+          };
 
           return (
-              <form onSubmit={onSendMessage} className="p-4 bg-brand-surface">
+              <div className={`bg-brand-surface rounded-lg p-4 space-y-3 ${className}`}>
+                  <h3 className="text-lg font-semibold text-brand-primary mb-3">시스템 상태</h3>
+                  
+                  {/* 로딩 상태 */}
+                  {isLoading && (
+                      <div className="flex items-center gap-2 text-brand-text-secondary">
+                          <div className="w-4 h-4 border-2 border-brand-primary border-t-transparent rounded-full animate-spin"></div>
+                          <span>처리 중...</span>
+                      </div>
+                  )}
+
+                  {/* 에러 상태 */}
+                  {error && (
+                      <div className="flex items-center gap-2 text-red-400 bg-red-900/20 p-2 rounded">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          <span className="text-sm">{error}</span>
+                      </div>
+                  )}
+
+                  {/* 캐시 상태 */}
+                  {cacheStats && (
+                      <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-brand-text-primary">캐시 상태</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="flex justify-between">
+                                  <span className="text-brand-text-secondary">항목 수:</span>
+                                  <span className="text-brand-text-primary">{cacheStats.totalItems}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                  <span className="text-brand-text-secondary">히트율:</span>
+                                  <span className="text-brand-text-primary">{formatPercentage(cacheStats.hitRate)}</span>
+                              </div>
+                              <div className="flex justify-between col-span-2">
+                                  <span className="text-brand-text-secondary">총 크기:</span>
+                                  <span className="text-brand-text-primary">{formatBytes(cacheStats.totalSize)}</span>
+                              </div>
+                          </div>
+                          
+                          {/* 히트율 시각화 */}
+                          <div className="w-full bg-brand-secondary rounded-full h-2">
+                              <div 
+                                  className="bg-brand-primary h-2 rounded-full transition-all duration-300"
+                                  style={{ width: `${cacheStats.hitRate * 100}%` }}
+                              ></div>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* 요청 큐 상태 */}
+                  {queueStatus && (
+                      <div className="space-y-2">
+                          <h4 className="text-sm font-medium text-brand-text-primary">요청 큐</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                              <div className="flex justify-between">
+                                  <span className="text-brand-text-secondary">대기:</span>
+                                  <span className="text-yellow-400">{queueStatus.pendingCount}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                  <span className="text-brand-text-secondary">처리중:</span>
+                                  <span className="text-blue-400">{queueStatus.processingCount}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                  <span className="text-brand-text-secondary">실패:</span>
+                                  <span className="text-red-400">{queueStatus.failedCount}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                  <span className="text-brand-text-secondary">총 큐:</span>
+                                  <span className="text-brand-text-primary">{queueStatus.totalLength}</span>
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* 시스템 상태 요약 */}
+                  <div className="pt-2 border-t border-brand-secondary">
+                      <div className="flex items-center justify-between text-sm">
+                          <span className="text-brand-text-secondary">시스템 상태:</span>
+                          <div className="flex items-center gap-1">
+                              {error ? (
+                                  <>
+                                      <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                                      <span className="text-red-400">오류</span>
+                                  </>
+                              ) : isLoading ? (
+                                  <>
+                                      <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                                      <span className="text-yellow-400">처리중</span>
+                                  </>
+                              ) : (
+                                  <>
+                                      <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                      <span className="text-green-400">정상</span>
+                                  </>
+                              )}
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+      };
+
+      // --- Inlined from components/CacheStats.tsx ---
+      const CacheStats = ({ 
+          stats, 
+          onClearCache, 
+          className = "" 
+      }) => {
+          const formatBytes = (bytes) => {
+              if (bytes === 0) return '0 Bytes';
+              const k = 1024;
+              const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+              const i = Math.floor(Math.log(bytes) / Math.log(k));
+              return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+          };
+
+          const formatPercentage = (value) => {
+              return (value * 100).toFixed(1) + '%';
+          };
+
+          const getHitRateColor = (rate) => {
+              if (rate >= 0.7) return 'text-green-400';
+              if (rate >= 0.4) return 'text-yellow-400';
+              return 'text-red-400';
+          };
+
+          const getHitRateBarColor = (rate) => {
+              if (rate >= 0.7) return 'bg-green-400';
+              if (rate >= 0.4) return 'bg-yellow-400';
+              return 'bg-red-400';
+          };
+
+          return (
+              <div className={`bg-brand-surface rounded-lg p-4 space-y-4 ${className}`}>
+                  <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-semibold text-brand-primary">캐시 통계</h3>
+                      {onClearCache && (
+                          <button
+                              onClick={onClearCache}
+                              className="px-3 py-1 text-xs bg-red-600 hover:bg-red-700 text-white rounded transition-colors"
+                          >
+                              캐시 초기화
+                          </button>
+                      )}
+                  </div>
+
+                  {/* 히트율 표시 */}
+                  <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-brand-text-primary">캐시 히트율</span>
+                          <span className={`text-lg font-bold ${getHitRateColor(stats.hitRate)}`}>
+                              {formatPercentage(stats.hitRate)}
+                          </span>
+                      </div>
+                      
+                      {/* 히트율 프로그레스 바 */}
+                      <div className="w-full bg-brand-secondary rounded-full h-3">
+                          <div 
+                              className={`h-3 rounded-full transition-all duration-500 ${getHitRateBarColor(stats.hitRate)}`}
+                              style={{ width: `${stats.hitRate * 100}%` }}
+                          ></div>
+                      </div>
+                      
+                      {/* 히트/미스 카운트 */}
+                      <div className="flex justify-between text-xs text-brand-text-secondary">
+                          <span>히트: {stats.hitCount}</span>
+                          <span>미스: {stats.missCount}</span>
+                      </div>
+                  </div>
+
+                  {/* 기본 통계 */}
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div className="space-y-1">
+                          <div className="flex justify-between">
+                              <span className="text-brand-text-secondary">총 항목:</span>
+                              <span className="text-brand-text-primary font-medium">{stats.totalItems}</span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span className="text-brand-text-secondary">만료된 항목:</span>
+                              <span className="text-orange-400">{stats.expiredItems}</span>
+                          </div>
+                      </div>
+                      
+                      <div className="space-y-1">
+                          <div className="flex justify-between">
+                              <span className="text-brand-text-secondary">총 크기:</span>
+                              <span className="text-brand-text-primary font-medium">{formatBytes(stats.totalSize)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span className="text-brand-text-secondary">평균 크기:</span>
+                              <span className="text-brand-text-primary">{formatBytes(stats.averageItemSize)}</span>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* 가장 많이 접근된 항목 */}
+                  {stats.mostAccessedItem && (
+                      <div className="pt-2 border-t border-brand-secondary">
+                          <div className="text-xs text-brand-text-secondary">
+                              <span className="font-medium">가장 많이 접근된 항목:</span>
+                              <div className="mt-1 p-2 bg-brand-bg rounded text-brand-text-primary font-mono text-xs truncate">
+                                  {stats.mostAccessedItem}
+                              </div>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* 성능 지표 */}
+                  <div className="pt-2 border-t border-brand-secondary">
+                      <div className="text-xs text-brand-text-secondary space-y-1">
+                          <div className="flex justify-between">
+                              <span>API 호출 절약:</span>
+                              <span className="text-green-400 font-medium">
+                                  {formatPercentage(stats.hitRate)} 감소
+                              </span>
+                          </div>
+                          <div className="flex justify-between">
+                              <span>예상 응답 시간:</span>
+                              <span className="text-blue-400 font-medium">
+                                  {stats.hitRate > 0.5 ? '< 100ms' : '1-2초'}
+                              </span>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          );
+      };
+
+      // --- Inlined from components/MessageInput.tsx ---
+      const MessageInput = ({ 
+          currentMessage, 
+          setCurrentMessage, 
+          onSendMessage, 
+          isLoading, 
+          disabled,
+          lastMessageTime = 0,
+          maxLength = 500,
+          minInterval = 3000
+      }) => {
+          const [inputError, setInputError] = useState('');
+          const [remainingTime, setRemainingTime] = useState(0);
+          
+          const isInputDisabled = isLoading || disabled || remainingTime > 0;
+          const timeSinceLastMessage = Date.now() - lastMessageTime;
+          const canSend = timeSinceLastMessage >= minInterval;
+          
+          // 남은 시간 계산
+          useEffect(() => {
+              if (!canSend && lastMessageTime > 0) {
+                  const interval = setInterval(() => {
+                      const elapsed = Date.now() - lastMessageTime;
+                      const remaining = Math.max(0, minInterval - elapsed);
+                      setRemainingTime(remaining);
+                      
+                      if (remaining === 0) {
+                          clearInterval(interval);
+                      }
+                  }, 100);
+                  
+                  return () => clearInterval(interval);
+              }
+          }, [canSend, lastMessageTime, minInterval]);
+          
+          // 입력 검증
+          const handleInputChange = (e) => {
+              const value = e.target.value;
+              
+              // 길이 제한
+              if (value.length > maxLength) {
+                  setInputError(`메시지는 ${maxLength}자를 초과할 수 없습니다.`);
+                  return;
+              }
+              
+              // 중복 메시지 검사
+              if (value.trim() === currentMessage.trim() && value.trim() !== '') {
+                  setInputError('동일한 메시지를 연속으로 보낼 수 없습니다.');
+                  return;
+              }
+              
+              setInputError('');
+              setCurrentMessage(value);
+          };
+          
+          // 전송 처리
+          const handleSubmit = (e) => {
+              e.preventDefault();
+              
+              if (!currentMessage.trim()) {
+                  setInputError('메시지를 입력해주세요.');
+                  return;
+              }
+              
+              if (!canSend) {
+                  setInputError(`잠시 후 다시 시도해주세요. (${Math.ceil(remainingTime / 1000)}초 남음)`);
+                  return;
+              }
+              
+              setInputError('');
+              onSendMessage(e);
+          };
+          
+          const formatTime = (ms) => {
+              return Math.ceil(ms / 1000);
+          };
+
+          return (
+              <form onSubmit={handleSubmit} className="p-4 bg-brand-surface">
+                  {/* 입력 제한 상태 표시 */}
+                  {remainingTime > 0 && (
+                      <div className="mb-2 p-2 bg-yellow-900/20 border border-yellow-600/30 rounded text-yellow-300 text-sm">
+                          <div className="flex items-center gap-2">
+                              <div className="w-4 h-4 border-2 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                              <span>다음 메시지까지 {formatTime(remainingTime)}초 대기 중...</span>
+                          </div>
+                      </div>
+                  )}
+                  
+                  {/* 에러 메시지 */}
+                  {inputError && (
+                      <div className="mb-2 p-2 bg-red-900/20 border border-red-600/30 rounded text-red-300 text-sm">
+                          {inputError}
+                      </div>
+                  )}
+                  
                   <div className="relative">
                       <input
                           type="text"
                           value={currentMessage}
-                          onChange={(e) => setCurrentMessage(e.target.value)}
-                          placeholder={disabled ? "자료를 로딩 중입니다..." : "질문을 입력하세요..."}
+                          onChange={handleInputChange}
+                          placeholder={
+                              disabled ? "자료를 로딩 중입니다..." : 
+                              remainingTime > 0 ? `잠시 후 다시 시도해주세요...` :
+                              "질문을 입력하세요..."
+                          }
                           disabled={isInputDisabled}
                           className="w-full bg-brand-bg border border-brand-secondary rounded-full py-3 pl-4 pr-12 text-brand-text-primary focus:outline-none focus:ring-2 focus:ring-brand-primary disabled:opacity-50"
+                          maxLength={maxLength}
                       />
                       <button
                           type="submit"
-                          disabled={isInputDisabled || !currentMessage}
+                          disabled={isInputDisabled || !currentMessage.trim()}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full text-brand-primary hover:bg-brand-primary/20 disabled:text-brand-secondary disabled:hover:bg-transparent transition-colors"
                       >
                           <SendIcon className="w-6 h-6" />
                       </button>
+                  </div>
+                  
+                  {/* 글자 수 표시 */}
+                  <div className="mt-2 flex justify-between text-xs text-brand-text-secondary">
+                      <span>{currentMessage.length} / {maxLength}자</span>
+                      {lastMessageTime > 0 && (
+                          <span>
+                              마지막 메시지: {formatTime(timeSinceLastMessage)}초 전
+                          </span>
+                      )}
                   </div>
               </form>
           );
@@ -256,6 +611,21 @@
           const [isParsing, setIsParsing] = useState(true);
           const [discoveredFiles, setDiscoveredFiles] = useState([]);
           const [error, setError] = useState(null);
+          
+          // 새로운 상태 추가
+          const [lastMessageTime, setLastMessageTime] = useState(0);
+          const [cacheStats, setCacheStats] = useState({
+              totalItems: 0,
+              hitRate: 0,
+              totalSize: 0
+          });
+          const [queueStatus, setQueueStatus] = useState({
+              totalLength: 0,
+              pendingCount: 0,
+              processingCount: 0,
+              failedCount: 0
+          });
+          const [showStats, setShowStats] = useState(false);
 
           const PDF_BASE_URL = 'https://ggawoos-bot.github.io/chat2/pdf/';
 
@@ -343,6 +713,7 @@
               setCurrentMessage('');
               setIsLoading(true);
               setError(null);
+              setLastMessageTime(Date.now());
 
               try {
                   const stream = await chatSession.sendMessageStream({ message: userMessage.content });
@@ -358,6 +729,10 @@
                           return newMessages;
                       });
                   }
+                  
+                  // 성공 시 통계 업데이트 (시뮬레이션)
+                  updateStats();
+                  
               } catch (err) {
                   console.error(err);
                   let displayMessage = '죄송합니다, 답변을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
@@ -381,25 +756,114 @@
               }
           }, [chatSession, currentMessage, isLoading]);
 
+          // 통계 업데이트 함수 (시뮬레이션)
+          const updateStats = useCallback(() => {
+              // 캐시 통계 시뮬레이션
+              setCacheStats(prev => ({
+                  totalItems: prev.totalItems + Math.floor(Math.random() * 2),
+                  hitRate: Math.min(0.9, prev.hitRate + Math.random() * 0.1),
+                  totalSize: prev.totalSize + Math.floor(Math.random() * 1000)
+              }));
+              
+              // 큐 상태 시뮬레이션
+              setQueueStatus(prev => ({
+                  totalLength: Math.max(0, prev.totalLength + Math.floor(Math.random() * 3) - 1),
+                  pendingCount: Math.max(0, prev.pendingCount + Math.floor(Math.random() * 2) - 1),
+                  processingCount: isLoading ? 1 : 0,
+                  failedCount: Math.random() < 0.1 ? prev.failedCount + 1 : prev.failedCount
+              }));
+          }, [isLoading]);
+
+          // 주기적 통계 업데이트
+          useEffect(() => {
+              const interval = setInterval(updateStats, 5000);
+              return () => clearInterval(interval);
+          }, [updateStats]);
+
           return (
               <div className="h-screen w-screen flex flex-col p-4 gap-4 bg-brand-bg">
                   <header className="text-center">
                       <h1 className="text-2xl font-bold text-brand-text-primary">금연사업 지침 문의 Chatbot</h1>
                   </header>
                   
-                  <main className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
+                  <main className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-0">
                       {/* Source Info Column */}
                       <div className="flex flex-col min-h-0">
                            <SourceInfo
                                 isLoading={isParsing}
                                 files={discoveredFiles}
                            />
+                           
+                           {/* 상태 표시 컴포넌트 */}
+                           <div className="mt-4">
+                               <StatusIndicator
+                                   cacheStats={cacheStats}
+                                   queueStatus={queueStatus}
+                                   isLoading={isLoading}
+                                   error={error}
+                               />
+                           </div>
+                           
+                           {/* 통계 토글 버튼 */}
+                           <div className="mt-4 flex justify-center">
+                               <button
+                                   onClick={() => setShowStats(!showStats)}
+                                   className="px-4 py-2 bg-brand-primary hover:bg-brand-primary/80 text-brand-bg rounded-lg text-sm transition-colors"
+                               >
+                                   {showStats ? '통계 숨기기' : '상세 통계 보기'}
+                               </button>
+                           </div>
+                           
+                           {/* 상세 통계 */}
+                           {showStats && (
+                               <div className="mt-4">
+                                   <CacheStats
+                                       stats={{
+                                           totalItems: cacheStats.totalItems,
+                                           hitCount: Math.floor(cacheStats.hitRate * 100),
+                                           missCount: Math.floor((1 - cacheStats.hitRate) * 100),
+                                           hitRate: cacheStats.hitRate,
+                                           totalSize: cacheStats.totalSize,
+                                           averageItemSize: cacheStats.totalItems > 0 ? cacheStats.totalSize / cacheStats.totalItems : 0,
+                                           expiredItems: 0,
+                                           mostAccessedItem: '금연사업 지침 관련 질문'
+                                       }}
+                                       onClearCache={() => {
+                                           setCacheStats({ totalItems: 0, hitRate: 0, totalSize: 0 });
+                                           console.log('캐시 초기화됨');
+                                       }}
+                                   />
+                               </div>
+                           )}
                       </div>
                       
                       {/* Chat Column */}
-                      <div className="flex flex-col h-full bg-brand-surface rounded-lg min-h-0">
+                      <div className="flex flex-col h-full bg-brand-surface rounded-lg min-h-0 lg:col-span-2">
                           <div className="flex-1 flex flex-col min-h-0">
-                            <h2 className="text-lg font-semibold text-brand-primary p-4 border-b border-brand-secondary">질문하기</h2>
+                            <div className="flex items-center justify-between p-4 border-b border-brand-secondary">
+                                <h2 className="text-lg font-semibold text-brand-primary">질문하기</h2>
+                                {/* 실시간 상태 표시 */}
+                                <div className="flex items-center gap-2 text-sm text-brand-text-secondary">
+                                    {isLoading && (
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                                            <span>처리중</span>
+                                        </div>
+                                    )}
+                                    {queueStatus.processingCount > 0 && (
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                                            <span>큐 처리중 ({queueStatus.processingCount})</span>
+                                        </div>
+                                    )}
+                                    {cacheStats.hitRate > 0 && (
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                                            <span>캐시 {(cacheStats.hitRate * 100).toFixed(0)}%</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                               <>
                                  {error && <div className="p-4 bg-red-900/50 text-red-300 border-b border-red-700">{error}</div>}
                                  <ChatWindow 
@@ -414,6 +878,9 @@
                                       onSendMessage={handleSendMessage}
                                       isLoading={isLoading}
                                       disabled={!chatSession || isParsing}
+                                      lastMessageTime={lastMessageTime}
+                                      maxLength={500}
+                                      minInterval={3000}
                                   />
                               </>
                           </div>
