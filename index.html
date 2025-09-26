@@ -430,7 +430,7 @@
           const [inputError, setInputError] = useState('');
           const [remainingTime, setRemainingTime] = useState(0);
           
-          const isInputDisabled = isLoading || disabled || remainingTime > 0 || retryCountdown > 0;
+          const isInputDisabled = isLoading || disabled || remainingTime > 0;
           const timeSinceLastMessage = Date.now() - lastMessageTime;
           const canSend = timeSinceLastMessage >= minInterval;
           
@@ -519,7 +519,7 @@
                           onChange={handleInputChange}
                           placeholder={
                               disabled ? "자료를 로딩 중입니다..." : 
-                              retryCountdown > 0 ? `API 한도 초과 - ${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 사용 가능` :
+                              retryCountdown > 0 ? `질문을 입력하세요 (${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 전송 가능)` :
                               remainingTime > 0 ? `잠시 후 다시 시도해주세요...` :
                               "질문을 입력하세요..."
                           }
@@ -529,7 +529,7 @@
                       />
                       <button
                           type="submit"
-                          disabled={isInputDisabled || !currentMessage.trim()}
+                          disabled={isInputDisabled || !currentMessage.trim() || retryCountdown > 0}
                           title={
                               retryCountdown > 0 ? `API 한도 초과 - ${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 사용 가능` :
                               remainingTime > 0 ? "잠시 후 다시 시도해주세요" :
@@ -719,7 +719,13 @@
 
           const handleSendMessage = useCallback(async (e) => {
               e.preventDefault();
-              if (!currentMessage.trim() || !chatSession || isLoading || retryCountdown > 0) return;
+              if (!currentMessage.trim() || !chatSession || isLoading) return;
+              
+              // API 한도 초과 시 전송 차단
+              if (retryCountdown > 0) {
+                  setError(`🚫 API 한도 초과 - ${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 다시 시도해주세요.`);
+                  return;
+              }
 
               const userMessage = { role: Role.USER, content: currentMessage.trim() };
               setMessages(prev => [...prev, userMessage]);
@@ -751,8 +757,19 @@
                   let displayMessage = '죄송합니다, 답변을 생성하는 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
 
                   if (err instanceof Error && (err.message.includes('429') || err.message.includes('RESOURCE_EXHAUSTED'))) {
-                      // 5분 후 재시도 가능
-                      const retryDelay = 5 * 60 * 1000; // 5분
+                      // 실제 API 한도 복구 시간 계산
+                      let retryDelay;
+                      if (err.message.includes('429')) {
+                          // Rate limit - 일반적으로 1분 후 복구
+                          retryDelay = 1 * 60 * 1000; // 1분
+                      } else if (err.message.includes('RESOURCE_EXHAUSTED')) {
+                          // Resource exhausted - 더 긴 대기 시간
+                          retryDelay = 5 * 60 * 1000; // 5분
+                      } else {
+                          // 기본값
+                          retryDelay = 2 * 60 * 1000; // 2분
+                      }
+                      
                       const nextRetry = new Date(Date.now() + retryDelay);
                       setNextRetryTime(nextRetry);
                       
@@ -764,7 +781,8 @@
                       displayMessage = `🚫 답변 요청 한도를 초과했습니다.\n⏰ 다음 시도 가능 시간: ${retryTimeString}`;
                       
                       // 실시간 카운트다운 시작
-                      setRetryCountdown(300); // 5분 = 300초
+                      const countdownSeconds = Math.floor(retryDelay / 1000);
+                      setRetryCountdown(countdownSeconds);
                       const countdownTimer = setInterval(() => {
                           setRetryCountdown(prev => {
                               if (prev <= 1) {
@@ -923,14 +941,14 @@
                                                  <div className="w-full bg-red-800 rounded-full h-2">
                                                      <div 
                                                          className="bg-gradient-to-r from-yellow-400 to-green-400 h-2 rounded-full transition-all duration-1000"
-                                                         style={{ width: `${100 - (retryCountdown / 300) * 100}%` }}
+                                                         style={{ width: `${100 - (retryCountdown / (retryCountdown > 0 ? Math.max(retryCountdown, 60) : 60)) * 100}%` }}
                                                      ></div>
                                                  </div>
                                                  
                                                  {/* 상태 메시지 */}
                                                  <div className="text-xs text-red-200">
-                                                     {retryCountdown > 240 ? '🔴 API 한도 초과 - 대기 중' :
-                                                      retryCountdown > 120 ? '🟡 복구 중 - 잠시만 기다려주세요' :
+                                                     {retryCountdown > 180 ? '🔴 API 한도 초과 - 대기 중' :
+                                                      retryCountdown > 60 ? '🟡 복구 중 - 잠시만 기다려주세요' :
                                                       '🟢 곧 사용 가능합니다'}
                                                  </div>
                                              </div>
