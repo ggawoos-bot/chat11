@@ -424,12 +424,13 @@
           disabled,
           lastMessageTime = 0,
           maxLength = 500,
-          minInterval = 3000
+          minInterval = 3000,
+          retryCountdown = 0
       }) => {
           const [inputError, setInputError] = useState('');
           const [remainingTime, setRemainingTime] = useState(0);
           
-          const isInputDisabled = isLoading || disabled || remainingTime > 0;
+          const isInputDisabled = isLoading || disabled || remainingTime > 0 || retryCountdown > 0;
           const timeSinceLastMessage = Date.now() - lastMessageTime;
           const canSend = timeSinceLastMessage >= minInterval;
           
@@ -518,6 +519,7 @@
                           onChange={handleInputChange}
                           placeholder={
                               disabled ? "자료를 로딩 중입니다..." : 
+                              retryCountdown > 0 ? `API 한도 초과 - ${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 사용 가능` :
                               remainingTime > 0 ? `잠시 후 다시 시도해주세요...` :
                               "질문을 입력하세요..."
                           }
@@ -528,6 +530,13 @@
                       <button
                           type="submit"
                           disabled={isInputDisabled || !currentMessage.trim()}
+                          title={
+                              retryCountdown > 0 ? `API 한도 초과 - ${Math.floor(retryCountdown / 60)}:${String(retryCountdown % 60).padStart(2, '0')} 후 사용 가능` :
+                              remainingTime > 0 ? "잠시 후 다시 시도해주세요" :
+                              isLoading ? "처리 중입니다..." :
+                              !currentMessage.trim() ? "질문을 입력하세요" :
+                              "전송"
+                          }
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full text-brand-primary hover:bg-brand-primary/20 disabled:text-brand-secondary disabled:hover:bg-transparent transition-colors"
                       >
                           <SendIcon className="w-6 h-6" />
@@ -710,7 +719,7 @@
 
           const handleSendMessage = useCallback(async (e) => {
               e.preventDefault();
-              if (!currentMessage.trim() || !chatSession || isLoading) return;
+              if (!currentMessage.trim() || !chatSession || isLoading || retryCountdown > 0) return;
 
               const userMessage = { role: Role.USER, content: currentMessage.trim() };
               setMessages(prev => [...prev, userMessage]);
@@ -934,15 +943,16 @@
                                      sourceProvided={!!chatSession}
                                      isParsingDocs={isParsing}
                                  />
-                                 <MessageInput
+                                  <MessageInput
                                       currentMessage={currentMessage}
                                       setCurrentMessage={setCurrentMessage}
                                       onSendMessage={handleSendMessage}
                                       isLoading={isLoading}
-                                      disabled={!chatSession || isParsing}
+                                      disabled={!chatSession || isParsing || retryCountdown > 0}
                                       lastMessageTime={lastMessageTime}
                                       maxLength={500}
                                       minInterval={3000}
+                                      retryCountdown={retryCountdown}
                                   />
                               </>
                           </div>
