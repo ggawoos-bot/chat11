@@ -32,10 +32,22 @@ export interface InputLimitConfig {
   PREVENT_DUPLICATES: boolean;
 }
 
+export interface LlmConfig {
+  /** LLM 서비스 타입 */
+  SERVICE_TYPE: 'gemini' | 'ollama';
+  /** Ollama 서버 URL */
+  OLLAMA_BASE_URL: string;
+  /** 기본 Ollama 모델 */
+  OLLAMA_DEFAULT_MODEL: string;
+  /** 모델 자동 다운로드 여부 */
+  AUTO_DOWNLOAD_MODEL: boolean;
+}
+
 export interface ApiConfig {
   RATE_LIMIT: RateLimitConfig;
   CACHE: CacheConfig;
   INPUT_LIMIT: InputLimitConfig;
+  LLM: LlmConfig;
 }
 
 /**
@@ -58,6 +70,12 @@ export const API_CONFIG: ApiConfig = {
     MIN_INTERVAL_MS: 5000,    // 5초 간격 (더 길게)
     MAX_LENGTH: 500,
     PREVENT_DUPLICATES: false  // 중복 메시지 방지 비활성화
+  },
+  LLM: {
+    SERVICE_TYPE: 'ollama',  // 기본값을 ollama로 설정
+    OLLAMA_BASE_URL: 'http://localhost:11434',
+    OLLAMA_DEFAULT_MODEL: 'exaone3.5:2.4b',
+    AUTO_DOWNLOAD_MODEL: true
   }
 };
 
